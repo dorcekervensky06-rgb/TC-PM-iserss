@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ISERSS - Tronc Commun PM</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'DM Sans',sans-serif;background:#0d0f14;color:#e8ecf5}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#2a3040;border-radius:4px}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes slideDown{from{opacity:0;max-height:0}to{opacity:1;max-height:2000px}}
+    .fade{animation:fadeUp .3s ease both}
+    .slide{animation:slideDown .3s ease both;overflow:hidden}
+    input::placeholder{color:#3a4055}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState } = React;
+
+    const COLORS = ['#4f8ef7','#f7a14f','#4fcf8e','#cf4f8e','#8e4fcf','#f7604f','#4ff7c8'];
+    const EMOJIS = ['📚','📖','🔬','🧮','🌍','🎨','💻','🎵','🏛️','⚗️','📐','🌿'];
+
+    const initDB = {
+      users: [
+        { id:'u1', username:'prof', password:'prof123', role:'pwofesè' },
+        { id:'u2', username:'etidyan', password:'eti123', role:'etidyan' },
+      ],
+      matieres: [
+        { id:'m1', name:'Matematik', emoji:'🧮', color:'#4f8ef7' },
+        { id:'m2', name:'Istwa', emoji:'🌍', color:'#f7a14f' },
+        { id:'m3', name:'Byoloji', emoji:'🌿', color:'#4fcf8e' },
+      ],
+      kous: []
+    };
+
+    function getDB() {
+      try { return JSON.parse(localStorage.getItem('iserss_db3')) || initDB; } catch { return initDB; }
+    }
+    function saveDB(db) {
+      localStorage.setItem('iserss_db3', JSON.stringify(db));
+    }
+
+    function convertDriveLink(url) {
+      if (!url) return '';
+      const m1 = url.match(/\/file\/d\/([^/]+)/);
+      if (m1) return `https://drive.google.com/uc?export=download&id=${m1[1]}`;
+      const m2 = url.match(/[?&]id=([^&]+)/);
+      if (m2) return `https://drive.google.com/uc?export=download&id=${m2[1]}`;
+      return url;
+    }
+
+    const inp = { background:'#0d0f14', border:'1px solid #2a3040', borderRadius:10, color:'#e8ecf5', padding:'11px 14px', width:'100%', fontFamily:'DM Sans,sans-serif', fontSize:'.92rem', outline:'none' };
+    const lbl = { display:'block', fontSize:'.78rem', fontWeight:500, color:'#6b7694', marginBottom:6, textTransform:'uppercase', letterSpacing:'.05em' };
+
+    function Modal({ open, onClose, children }) {
+      if (!open) return null;
+      return (
+        <div onClick={e => e.target===e.currentTarget && onClose()}
+          style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.8)', backdropFilter:'blur(4px)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:16, overflowY:'auto' }}>
+          <div className="fade" style={{ background:'#161a23', border:'1px solid #2a3040', borderRadius:20, padding:'28px 24px', width:'100%', maxWidth:480, margin:'auto' }}>
+            {children}
+          </div>
+        </div>
+      );
+    }
+
+    function KouCard({ k, isPro, onDel, color, formatDate }) {
+      const [open, setOpen] = useState(false);
+      return (
+        <div style={{ background:'#161a23', border:'1px solid #2a3040', borderRadius:14, overflow:'hidden', marginBottom:10 }}>
+          <div onClick={() => setOpen(o => !o)}
+            style={{ display:'flex', alignItems:'center', gap:12, padding:'14px 16px', cursor:'pointer', userSelect:'none' }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:color+'22', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1rem', flexShrink:0 }}>🎧</div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontFamily:'Syne,sans-serif', fontSize:'.92rem', fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{k.title}</div>
+              <div style={{ fontSize:'.72rem', color:'#6b7694', marginTop:2 }}>📅 {formatDate(k.date)}</div>
+            </div>
+            <div style={{ color:'#6b7694', fontSize:'1.1rem', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition:'transform .25s' }}>⌄</div>
+          </div>
+          {open && (
+            <div className="slide" style={{ borderTop:'1px solid #2a3040', padding:'14px 16px' }}>
+              {k.desc && <div style={{ fontSize:'.82rem', color:'#a0a8c0', marginBottom:12, lineHeight:1.6 }}>{k.desc}</div>}
+              <a href={k.driveLink} target="_blank" rel="noopener noreferrer"
+                style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'12px', borderRadius:10, background:'rgba(79,142,247,.12)', border:'1px solid rgba(79,142,247,.25)', color:'#4f8ef7', fontSize:'.85rem', fontWeight:600, textDecoration:'none', marginBottom: isPro ? 10 : 0 }}>
+                ▶ Koute / Telechaje sou Drive
+              </a>
+              {isPro && (
+                <button onClick={() => onDel(k.id)}
+                  style={{ width:'100%', padding:'8px', borderRadius:8, background:'rgba(247,96,79,.08)', border:'1px solid rgba(247,96,79,.2)', color:'#f7604f', fontSize:'.8rem', cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>
+                  🗑 Efase Kou
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function Auth({ onLogin, db, setDb }) {
+      const [tab, setTab] = useState('login');
+      const [lu, setLu] = useState(''); const [lp, setLp] = useState('');
+      const [ru, setRu] = useState(''); const [rp, setRp] = useState('');
+      const [role, setRole] = useState('etidyan');
+      const [msg, setMsg] = useState('');
+
+      const login = () => {
+        const user = db.users.find(x => x.username===lu && x.password===lp);
+        if (!user) { setMsg('❌ Non oswa modpas pa bon.'); return; }
+        onLogin(user);
+      };
+      const register = () => {
+        if (!ru||!rp) { setMsg('❌ Ranpli tout chan yo.'); return; }
+        if (db.users.find(x=>x.username===ru)) { setMsg('❌ Non sa a deja itilize.'); return; }
+        const user = { id:'u'+Date.now(), username:ru, password:rp, role };
+        const newDb = { ...db, users: [...db.users, user] };
+        saveDB(newDb); setDb(newDb);
+        onLogin(user);
+      };
+
+      return (
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', background:'#0d0f14', padding:20 }}>
+          <div className="fade" style={{ background:'#161a23', border:'1px solid #2a3040', borderRadius:24, padding:'36px 28px', width:'100%', maxWidth:400, boxShadow:'0 32px 80px rgba(0,0,0,.5)' }}>
+            <div style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:'1rem', color:'#4f8ef7', lineHeight:1.4, marginBottom:4 }}>
+              INSTITUT SUPÉRIEUR D'ÉTUDES<br/>ET DE RECHERCHES EN<br/><span style={{ color:'#f7a14f' }}>SCIENCES SOCIALES</span>
+            </div>
+            <div style={{ color:'#f7a14f', fontSize:'.75rem', fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', marginBottom:28 }}>◆ Tronc Commun PM</div>
+            <div style={{ display:'flex', gap:4, background:'#0d0f14', borderRadius:10, padding:4, marginBottom:24 }}>
+              {[['login','Konekte'],['register','Enskri']].map(([t,label]) => (
+                <button key={t} onClick={() => { setTab(t); setMsg(''); }}
+                  style={{ flex:1, padding:'9px', border:'none', borderRadius:8, background: tab===t ? '#1e2330' : 'transparent', color: tab===t ? '#e8ecf5' : '#6b7694', fontFamily:'DM Sans,sans-serif', fontSize:'.88rem', fontWeight:500, cursor:'pointer' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {tab==='login' ? (
+              <>
+                <div style={{ marginBottom:14 }}><label style={lbl}>Non Itilizatè</label><input style={inp} value={lu} onChange={e=>setLu(e.target.value)} placeholder="Antre non ou…" /></div>
+                <div style={{ marginBottom:16 }}><label style={lbl}>Modpas</label><input style={inp} type="password" value={lp} onChange={e=>setLp(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==='Enter'&&login()} /></div>
+                <button onClick={login} style={{ width:'100%', padding:14, background:'#4f8ef7', border:'none', borderRadius:10, color:'#fff', fontFamily:'Syne,sans-serif', fontSize:'1rem', fontWeight:700, cursor:'pointer' }}>Konekte →</button>
+              </>
+            ) : (
+              <>
+                <div style={{ marginBottom:14 }}><label style={lbl}>Non Itilizatè</label><input style={inp} value={ru} onChange={e=>setRu(e.target.value)} placeholder="Chwazi yon non…" /></div>
+                <div style={{ marginBottom:14 }}><label style={lbl}>Modpas</label><input style={inp} type="password" value={rp} onChange={e=>setRp(e.target.value)} placeholder="••••••••" /></div>
+                <div style={{ marginBottom:16 }}>
+                  <label style={lbl}>Wòl</label>
+                  <div style={{ display:'flex', gap:8 }}>
+                    {[['etidyan','🎓 Etidyan'],['pwofesè','👨‍🏫 Pwofesè']].map(([r,label]) => (
+                      <div key={r} onClick={() => setRole(r)}
+                        style={{ flex:1, padding:'10px 8px', textAlign:'center', border: role===r ? '1px solid #4f8ef7' : '1px solid #2a3040', borderRadius:10, cursor:'pointer', fontSize:'.85rem', color: role===r ? '#4f8ef7' : '#6b7694', background: role===r ? 'rgba(79,142,247,.08)' : '#0d0f14' }}>
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button onClick={register} style={{ width:'100%', padding:14, background:'#4f8ef7', border:'none', borderRadius:10, color:'#fff', fontFamily:'Syne,sans-serif', fontSize:'1rem', fontWeight:700, cursor:'pointer' }}>Kreye Kont →</button>
+              </>
+            )}
+            {msg && <div style={{ textAlign:'center', color:'#f7604f', fontSize:'.82rem', marginTop:12 }}>{msg}</div>}
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [db, setDb] = useState(getDB);
+      const [user, setUser] = useState(null);
+      const [matiere, setMatiere] = useState(null);
+      const [modal, setModal] = useState(null);
+      const [sidebarOpen, setSidebarOpen] = useState(false);
+      const [kouTitle, setKouTitle] = useState('');
+      const [kouDesc, setKouDesc] = useState('');
+      const [kouDate, setKouDate] = useState('');
+      const [driveLink, setDriveLink] = useState('');
+      const [linkError, setLinkError] = useState('');
+      const [mName, setMName] = useState('');
+      const [mEmoji, setMEmoji] = useState('📚');
+      const [mColor, setMColor] = useState(COLORS[0]);
+
+      const update = (fn) => {
+        const next = fn(JSON.parse(JSON.stringify(db)));
+        saveDB(next); setDb(next);
+      };
+
+      const isPro = user?.role === 'pwofesè';
+
+      if (!user) return <Auth onLogin={setUser} db={db} setDb={setDb} />;
+
+      const kous = matiere ? db.kous.filter(k=>k.matiereId===matiere.id).sort((a,b)=>new Date(b.date)-new Date(a.date)) : [];
+
+      const openKou = () => { setKouTitle(''); setKouDesc(''); setDriveLink(''); setLinkError(''); setKouDate(new Date().toISOString().split('T')[0]); setModal('kou'); };
+
+      const saveKou = () => {
+        if (!kouTitle.trim()) { setLinkError('Mete tit kou a!'); return; }
+        if (!driveLink.trim()) { setLinkError('Mete lyen Google Drive a!'); return; }
+        setLinkError('');
+        update(d => { d.kous.push({ id:'k'+Date.now(), matiereId:matiere.id, title:kouTitle, desc:kouDesc, date:kouDate, driveLink, addedBy:user.id }); return d; });
+        setModal(null);
+      };
+
+      const delKou = (id) => { if (confirm('Efase kou sa a?')) update(d => { d.kous=d.kous.filter(k=>k.id!==id); return d; }); };
+      const formatDate = d => d ? new Date(d).toLocaleDateString('fr-FR',{year:'numeric',month:'long',day:'numeric'}) : '';
+      const selectMatiere = (m) => { setMatiere(m); setSidebarOpen(false); };
+
+      return (
+        <div style={{ minHeight:'100vh', background:'#0d0f14', color:'#e8ecf5', display:'flex', flexDirection:'column' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'#161a23', borderBottom:'1px solid #2a3040', position:'sticky', top:0, zIndex:200 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+              <button onClick={() => setSidebarOpen(o=>!o)}
+                style={{ background:'transparent', border:'1px solid #2a3040', borderRadius:8, padding:'6px 10px', color:'#e8ecf5', fontSize:'1rem', cursor:'pointer' }}>☰</button>
+              <div>
+                <div style={{ fontFamily:'Syne,sans-serif', fontWeight:800, fontSize:'.82rem', color:'#4f8ef7' }}>ISERSS</div>
+                <div style={{ fontSize:'.7rem', color:'#f7a14f', fontWeight:600 }}>Tronc Commun PM</div>
+              </div>
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ width:30, height:30, borderRadius:'50%', background:'linear-gradient(135deg,#4f8ef7,#f7a14f)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'.8rem' }}>
+                {user.username[0].toUpperCase()}
+              </div>
+              <button onClick={() => { setUser(null); setMatiere(null); }}
+                style={{ background:'transparent', border:'1px solid #2a3040', borderRadius:8, padding:'5px 10px', color:'#6b7694', fontSize:'.78rem', cursor:'pointer' }}>Sòti</button>
+            </div>
+          </div>
+
+          {sidebarOpen && (
+            <div onClick={() => setSidebarOpen(false)}
+              style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.6)', zIndex:150 }}>
+              <div onClick={e=>e.stopPropagation()}
+                style={{ width:240, height:'100%', background:'#161a23', borderRight:'1px solid #2a3040', padding:'20px 10px', overflowY:'auto' }}>
+                <div style={{ fontSize:'.65rem', fontWeight:700, color:'#6b7694', textTransform:'uppercase', letterSpacing:'.1em', padding:'0 8px', marginBottom:10 }}>Matière</div>
+                {db.matieres.map(m => (
+                  <div key={m.id} onClick={() => selectMatiere(m)}
+                    style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 8px', borderRadius:10, cursor:'pointer', color: matiere?.id===m.id ? m.color : '#6b7694', background: matiere?.id===m.id ? m.color+'18' : 'transparent', marginBottom:2, fontSize:'.86rem', fontWeight:500 }}>
+                    <div style={{ width:28, height:28, borderRadius:7, background:m.color+'22', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{m.emoji}</div>
+                    <span style={{ flex:1 }}>{m.name}</span>
+                    <span style={{ fontSize:'.7rem', background:'#1e2330', borderRadius:20, padding:'1px 6px', color:'#6b7694' }}>{db.kous.filter(k=>k.matiereId===m.id).length}</span>
+                  </div>
+                ))}
+                {isPro && (
+                  <button onClick={() => { setSidebarOpen(false); setModal('matiere'); }}
+                    style={{ display:'flex', alignItems:'center', gap:6, padding:'8px', borderRadius:10, width:'100%', background:'transparent', border:'1px dashed #2a3040', color:'#6b7694', fontSize:'.8rem', cursor:'pointer', marginTop:10, fontFamily:'DM Sans,sans-serif' }}>
+                    + Ajoute Matière
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{ flex:1, padding:'20px 16px', overflowY:'auto', maxWidth:680, width:'100%', margin:'0 auto' }}>
+            {!matiere ? (
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'60vh', textAlign:'center' }}>
+                <div style={{ fontSize:'3rem', marginBottom:16 }}>🎧</div>
+                <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.6rem', fontWeight:800, marginBottom:8 }}>Chwazi yon <span style={{ color:'#4f8ef7' }}>Matière</span></div>
+                <div style={{ color:'#6b7694', fontSize:'.88rem' }}>Klike ☰ pou wè matière yo</div>
+              </div>
+            ) : (
+              <div className="fade">
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexWrap:'wrap', gap:10 }}>
+                  <div>
+                    <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.4rem', fontWeight:800 }}>{matiere.emoji} {matiere.name}</div>
+                    <div style={{ color:'#6b7694', fontSize:'.82rem', marginTop:3 }}>{kous.length} kou anrejistre</div>
+                  </div>
+                  {isPro && <button onClick={openKou} style={{ background:'#4f8ef7', border:'none', borderRadius:10, padding:'10px 16px', color:'#fff', fontFamily:'Syne,sans-serif', fontSize:'.85rem', fontWeight:700, cursor:'pointer' }}>+ Ajoute Kou</button>}
+                </div>
+                {kous.length === 0 ? (
+                  <div style={{ textAlign:'center', padding:'50px 20px', color:'#6b7694' }}>
+                    <div style={{ fontSize:'3rem', marginBottom:12, opacity:.4 }}>🎙️</div>
+                    <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1rem', color:'#e8ecf5', marginBottom:6 }}>Pa gen kou ankò</div>
+                    <div style={{ fontSize:'.85rem' }}>{isPro ? 'Klike "+ Ajoute Kou" pou kòmanse.' : 'Pwofesè a poko ajoute kou.'}</div>
+                  </div>
+                ) : kous.map(k => <KouCard key={k.id} k={k} isPro={isPro} onDel={delKou} color={matiere.color} formatDate={formatDate} />)}
+              </div>
+            )}
+          </div>
+
+          <Modal open={modal==='kou'} onClose={() => setModal(null)}>
+            <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.1rem', fontWeight:800, marginBottom:20 }}>➕ Ajoute Yon Kou</div>
+            <div style={{ marginBottom:12 }}><label style={lbl}>Tit Kou a</label><input style={inp} value={kouTitle} onChange={e=>setKouTitle(e.target.value)} placeholder="ex: Chapit 3 – Istwa Ayiti" /></div>
+            <div style={{ marginBottom:12 }}><label style={lbl}>Deskripsyon (opsyonèl)</label><input style={inp} value={kouDesc} onChange={e=>setKouDesc(e.target.value)} placeholder="ex: Kou sou revolisyon 1804…" /></div>
+            <div style={{ marginBottom:12 }}><label style={lbl}>Dat Kou a</label><input style={inp} type="date" value={kouDate} onChange={e=>setKouDate(e.target.value)} /></div>
+            <div style={{ marginBottom:8 }}>
+              <label style={lbl}>Lyen Google Drive</label>
+              <input style={{ ...inp, borderColor: linkError ? '#f7604f' : '#2a3040' }} value={driveLink} onChange={e=>{ setDriveLink(e.target.value); setLinkError(''); }} placeholder="https://drive.google.com/file/d/…/view" />
+            </div>
+            {linkError && <div style={{ color:'#f7604f', fontSize:'.82rem', marginBottom:10 }}>⚠ {linkError}</div>}
+            <div style={{ display:'flex', gap:10, marginTop:8 }}>
+              <button onClick={() => setModal(null)} style={{ flex:1, padding:12, background:'transparent', border:'1px solid #2a3040', borderRadius:10, color:'#6b7694', fontFamily:'DM Sans,sans-serif', fontSize:'.88rem', cursor:'pointer' }}>Anile</button>
+              <button onClick={saveKou} style={{ flex:2, padding:12, background:'#4f8ef7', border:'none', borderRadius:10, color:'#fff', fontFamily:'Syne,sans-serif', fontSize:'.9rem', fontWeight:700, cursor:'pointer' }}>Anrejistre ✓</button>
+            </div>
+          </Modal>
+
+          <Modal open={modal==='matiere'} onClose={() => setModal(null)}>
+            <div style={{ fontFamily:'Syne,sans-serif', fontSize:'1.1rem', fontWeight:800, marginBottom:20 }}>📚 Nouvo Matière</div>
+            <div style={{ marginBottom:14 }}><label style={lbl}>Non Matière a</label><input style={inp} value={mName} onChange={e=>setMName(e.target.value)} placeholder="ex: Matematik, Istwa…" /></div>
+            <div style={{ marginBottom:14 }}>
+              <label style={lbl}>Emoji</label>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {EMOJIS.map(e => <button key={e} onClick={() => setMEmoji(e)} style={{ fontSize:'1.2rem', background:'#1e2330', border: mEmoji===e ? '2px solid #4f8ef7' : '2px solid transparent', borderRadius:8, padding:'5px 8px', cursor:'pointer' }}>{e}</button>)}
+              </div>
+            </div>
+            <div style={{ marginBottom:20 }}>
+              <label style={lbl}>Koulè</label>
+              <div style={{ display:'flex', gap:8 }}>
+                {COLORS.map(c => <button key={c} onClick={() => setMColor(c)} style={{ width:26, height:26, borderRadius:'50%', background:c, border: mColor===c ? '3px solid #fff' : '3px solid transparent', cursor:'pointer' }} />)}
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={() => setModal(null)} style={{ flex:1, padding:12, background:'transparent', border:'1px solid #2a3040', borderRadius:10, color:'#6b7694', fontFamily:'DM Sans,sans-serif', fontSize:'.88rem', cursor:'pointer' }}>Anile</button>
+              <button onClick={() => { if(!mName.trim()){alert('Ba matière a yon non!');return;} update(d=>{d.matieres.push({id:'m'+Date.now(),name:mName,emoji:mEmoji,color:mColor});return d;}); setModal(null); setMName(''); }} style={{ flex:2, padding:12, background:'#4f8ef7', border:'none', borderRadius:10, color:'#fff', fontFamily:'Syne,sans-serif', fontSize:'.9rem', fontWeight:700, cursor:'pointer' }}>Kreye ✓</button>
+            </div>
+          </Modal>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
+
